@@ -1,0 +1,233 @@
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>California_County_Boundaries</title>
+  <style>
+     html,body,h1,h2,h3,h4,h5,h6,div,dl,dt,dd,ul,ol,li,p,blockquote,pre,hr,figure,table,caption,th,td,form,fieldset,legend,input,button,textarea,menu{margin:0;padding:0;}
+    html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+    svg {
+      position: absolute;
+      margin: auto;
+      left: 0;
+      right: 0;
+    }
+
+    .tooltip {
+      position: absolute;
+      pointer-events: none;
+      font-size: 14px;
+      opacity: 1;
+      /* margin: 15px; */
+      padding: 20px;
+    }
+
+    .southchinasea {
+      stroke: black;
+      stroke-width: 1px;
+      fill: red;
+    }
+
+    img {
+      border: 0.3px solid black;
+    }
+
+    .control {
+      position: fixed;
+      left: 12.5%;
+      top: 300px;
+      z-index: 11111;
+    }
+
+    .btns {
+      position: fixed;
+      bottom: 40px;
+      left: 12.5%;
+      display: flex;
+      z-index: 1111;
+    }
+
+    .btns .btn {
+      width: 100px;
+      height: 30px;
+      line-height: 30px;
+      border-radius: 5px;
+      text-align: center;
+      color: #fff;
+      background-color: rgb(79, 118, 192);
+      margin-right: 10px;
+      cursor: pointer;
+    }
+
+    .btns .btn:hover {
+      color: #000;
+      box-shadow: 0 0 5px #bbb;
+    }
+
+    .container {
+      padding-top: 20px;
+      display: flex;
+      flex-direction: column;
+      width: 75%;
+      line-height: 28px;
+      display: flex;
+      margin: 0 auto;
+    }
+  </style>
+  <script src="https://d3js.org/d3.v7.js" charset="utf-8"></script>
+</head>
+
+<body>
+  <div class="control">
+    <label>Selected Date</label>
+    <input type="date" id="myDate" name="myDate" value="2023-07-03" pattern='MM/dd/yyyy' onchange="changeDate()">
+  </div>
+
+  <div class="container" id="mainContainer">
+    <h2 style="text-align: center;">California COVID-19 Snapshot: Select Date and Hover for County-Specific Insights
+    </h2>
+    <br />
+    <p>
+      Step into the heart of California's COVID-19 story with our interactive map. By selecting your desired date, you
+      can unveil a wealth of data that breathes life into the numbers. Each county reveals its unique narrative as you
+      hover over it, providing detailed insights into its Area, Population, Number of Cases, Total Tests Administered,
+      Positive Test Results, and Death Toll. This tool empowers you to explore and understand the multifaceted impact of
+      COVID-19 on each part of California, one date at a time.
+    </p>
+    </ul>
+  </div>
+  <div class="btns">
+    <div class="btn" onclick="pre()">Previous</div>
+    <div class="btn" onclick="next()">First Slide</div>
+  </div>
+</body>
+<script>
+  var width = document.body.clientWidth *0.75,
+          height = document.body.clientHeight - document.getElementById('mainContainer').clientHeight;
+  var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+  var covid = [591, 113, 2, 0, 1, 5, 238, 0, 2330, 7, 392, 0, 102, 2, 8, 150, 0, 7, 103, 15, 0, 5, 212, 1, 12, 0, 2, 0, 16, 0, 0, 260761, 0, 0, 1371462]
+  var linear = d3.scaleLinear()
+    .domain([990, 90000])
+    .range([0, 255]);
+
+  var color = ['#fff7ec', '#fee8c8', '#fdd49e', '#fdbb84', '#fc8d59', '#ef6548', '#d7301f', '#b30000', 'rgb(153, 0, 0)'];
+
+  //定义地图的投影
+  var projection = d3.geoMercator()
+    .center([-120, 37])
+    .scale(screen.width> 2000? 5000: 3000)
+    .translate([width / 2, height / 2]);
+
+  //定义地形路径生成器
+  var geoPath = d3.geoPath()
+    .projection(projection); //设定投影
+
+  //颜色比例尺 
+  var date = '7/3/2023';
+
+  function changeDate() {
+    date = document.getElementById('myDate').value;
+    let arr = date.split('-').map(Number)
+    date = `${arr[1]}/${arr[2]}/${arr[0]}`
+    rendererMap()
+  }
+
+  rendererMap()
+
+  function rendererMap() {
+    // 先清空
+    d3.select('svg>g').remove()
+
+    let promise1 = d3.csv('./data.csv')
+    let promise2 = d3.json("./California_County_Boundaries.json")
+    //请求
+    Promise.all([promise1, promise2]).then(function (res) {           //100000_full.json  A2_100000_full.json  ../assignment/China.json
+      console.log(res);
+      console.log(date)
+      let csvData = res[0].filter(d => d.date === date)
+      // let maxCase = d3.max(csvData,(d)=>Number(d.cases))
+      // let minCase = d3.min(csvData,(d)=>Number(d.cases))
+      // let sortData = d3.sort(csvData,(d)=>Number(d.cases))
+      let sortArr = d3.sort(Array.from(new Set(csvData.map((d) => Number(d.cases)))))
+      console.log(csvData, sortArr)
+
+      let data = res[1];
+      console.log(data);
+      var scaleColor = d3.scaleOrdinal()
+        .domain(d3.range(data.features.length))
+        .range(d3.schemeCategory10);
+
+      var groups = svg.append("g");
+      var tooltip = d3.select("body")
+        .append("div")
+        .attr("class", "tooltip")
+        .style("background-color", "#d3d3d3")
+        .style("border-radius", "3px")
+        .style("padding", "5px");
+      groups.selectAll("path")
+        .data(data.features)
+        .enter()
+        .append("path")
+        .attr("class", "province")
+        .attr("stroke", "#333")
+        .attr("stroke-width", "0.2px")
+        // .attr("info", (d, i) => covid[i])
+        .attr("fill", function (d, i) {
+          const find = csvData.find(cs => cs.area === d.properties.CountyName)
+          // let index = Math.floor(Number(find.cases) / ((maxCase - minCase)/color.length))
+          let sortIndex = sortArr.indexOf(Number(find.cases))
+          let index = Math.floor(sortIndex / Math.ceil(sortArr.length / color.length))
+          return color[index]
+        })
+        .attr("d", (d, i) => geoPath(d))  //使用路径生成器
+        .on("mouseover", function (d, i) {
+          const find = csvData.find(cs => cs.area === i.properties.CountyName)
+          const change = d3.select(this)
+            .attr("stroke-width", "1.5px")
+            .attr("stroke", "rgb(65,174,60)")
+          var t = change.attr("info")
+          var html = `<div><b>Area:</b> ${find.area}</div>
+                      <div><b>Population:</b> ${thousandFormat('' + find.population)}</div>
+                      <div><b>Cases:</b> ${thousandFormat('' + find.cases)}</div>
+                      <div><b>Total Tests:</b> ${thousandFormat('' + find.total_tests)}</div>
+                      <div><b>Positive Tests:</b> ${thousandFormat('' + find.positive_tests)}</div>
+                      <div><b>Death:</b> ${thousandFormat('' + find.deaths)}</div>`;
+          tooltip.html(html)
+            .style("visibility", "visible")
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 10) + "px")
+
+        })
+        .on("mouseout", function (d, i) {
+          d3.select(this)
+            .attr("stroke-width", "0.2px")
+            .attr("stroke", "#333")
+          tooltip.style('visibility', 'hidden')
+        });
+
+    });
+  }
+
+  function thousandFormat(num) {
+    const rgx = /(\d+)(\d{3})/;
+    while (rgx.test(num)) {
+      num = num.replace(rgx, '$1,$2');
+    }
+    return num;
+  }
+  function pre() {
+    // window.history.go(-1)
+    window.open('./page3.html', '_self')
+  }
+  function next() {
+    window.open('./page1.html', '_self')
+  }
+</script>
+</html>

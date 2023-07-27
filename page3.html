@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>total_test && positive_test chart</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-annotation/2.5.1/d3-annotation.min.js"
+        integrity="sha512-iBAeBWWWFb8HqSBcrqcz98iIpuVH1la39dEYHtyQ/pGpeCQTQVvLJOWAuhv2Q7JSHp9k7hWA7sGxU3hHJe+tFg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-annotation/2.5.1/d3-annotation.independent.min.js"
+        integrity="sha512-89IU2quof1oR2mYXl38GkyY7HQFyHtzubPPEP7DlLNAkO6FH/3AHByuHAfi0zvLP4hMtggXASW9gFzQEYn8rWg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        html,
+        body,
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        div,
+        dl,
+        dt,
+        dd,
+        ul,
+        ol,
+        li,
+        p,
+        blockquote,
+        pre,
+        hr,
+        figure,
+        table,
+        caption,
+        th,
+        td,
+        form,
+        fieldset,
+        legend,
+        input,
+        button,
+        textarea,
+        menu {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        svg {
+            position: absolute;
+            left: 0;
+            right: 0;
+            margin: auto;
+        }
+
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: #000;
+            shape-rendering: crispEdges;
+        }
+
+        .bar {
+            fill: steelblue;
+        }
+
+        .line {
+            fill: none;
+            stroke: #e8b187;
+            stroke-width: 2px;
+        }
+
+        .line1 {
+            fill: none;
+            stroke: #6bd181;
+            stroke-width: 2px;
+        }
+
+        .tooltip {
+            position: absolute;
+            text-align: left;
+            width: 200px;
+            height: 40px;
+            padding: 10px;
+            font: 12px sans-serif;
+            background: #fff;
+            border: 0px;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+
+        .control {
+            position: fixed;
+            top: 200px;
+            left: 250px;
+            z-index: 111;
+        }
+
+        .btns {
+            position: fixed;
+            bottom: 40px;
+            left: 12.5%;
+            display: flex;
+            z-index: 1111;
+        }
+
+        .btns .btn {
+            width: 100px;
+            height: 30px;
+            line-height: 30px;
+            border-radius: 5px;
+            text-align: center;
+            color: #fff;
+            background-color: rgb(79, 118, 192);
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .btns .btn:hover {
+            color: #000;
+            box-shadow: 0 0 5px #bbb;
+        }
+
+        .container {
+            padding-top: 20px;
+            display: flex;
+            flex-direction: column;
+            width: 75%;
+            line-height: 28px;
+            display: flex;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="control" id="control">
+        <div style="color: #6bd181;">- Total Tests</div>
+        <div style="color: #e8b187;">- Total Positive Tests</div>
+        <br>
+        <div>
+            <label>Selected Area</label>
+            <select id="area" onchange="selectArea()"></select>
+        </div>
+    </div>
+
+    <div class="container" id="mainContainer">
+        <h2 style="text-align: center;">Behind the Swab: Understanding California's COVID-19 Testing and Positivity
+            Trends</h2>
+        <br />
+        <ul>
+            <li>This chart shows the tests and positive results over time.</li>
+            <li>January 2022 emerges as a standout month with the highest numbers of both tests conducted and positive
+                cases detected.</li>
+            <li>Beginning June 2022, a noticeable decrease in testing initiates, marking a shift in the state's pandemic
+                landscape.</li>
+            <li>By September 2022, positive test results plateau, indicating a steady state in the detection of new
+                COVID-19 cases.</li>
+        </ul>
+    </div>
+
+    <div id="svgContainer"> </div>
+    <div class="btns">
+        <div class="btn" onclick="pre()">Previous</div>
+        <div class="btn" onclick="next()">Next</div>
+    </div>
+
+
+
+</body>
+<script>
+    let promise1 = d3.csv('./total_test.csv')
+    let promise2 = d3.csv('./positive_test.csv')
+
+    let data = [];
+    let options = `<option value="total">All Areas</option>`;
+    let cases = [];
+    let cum_cases = [];
+    let annotations = [];
+
+    var monthOfYear = [];
+    for (let year = 2020; year <= 2023; year++) {
+        for (let month = 1; month <= 12; month++) {
+            if (year == 2020 && month < 2) {
+                continue;
+            }
+            if (year == 2023 && month > 7) {
+                continue;
+            }
+            let str = (month < 10 ? '0' + month : month) + '/' + year;
+            monthOfYear.push(str);
+        }
+    }
+
+    function selectArea() {
+        let str = document.getElementById('area').value
+        data = []
+        monthOfYear.forEach(month => {
+            let case1 = cases.find(cs => cs.date === month);
+            let case2 = cum_cases.find(cs => cs.date === month);
+            data.push({ date: month.replace('/20', '/'), value1: Number(case1[str]), value2: Number(case2[str]) })
+        })
+        console.log(data)
+        rendererChart()
+    }
+
+    Promise.all([promise1, promise2]).then(result => {
+        cases = result[0]
+        cum_cases = result[1]
+        monthOfYear.forEach(month => {
+            let case1 = cases.find(cs => cs.date === month);
+            let case2 = cum_cases.find(cs => cs.date === month);
+            data.push({ date: month.replace('/20', '/'), value1: Number(case1.total), value2: Number(case2.total) })
+        })
+        let mm = cases[0]
+        Object.keys(mm).forEach(ky => {
+            if (ky === 'date' || ky === 'total') {
+            } else {
+                options += `<option value="${ky}">${ky}</option>`
+            }
+        })
+        console.log(data)
+        document.getElementById('area').innerHTML = options
+        rendererChart()
+    })
+
+    function rendererChart() {
+        d3.select('svg').remove()
+        annotations = [];
+
+        var margin = { top: 20, right: 0, bottom: 150, left: 100 },
+            // width = screen.width - 500 - margin.left - margin.right,
+            // height = 600 - margin.top - margin.bottom;
+            width = document.body.clientWidth * 0.75 - margin.left - margin.right,
+            height = document.body.clientHeight - document.getElementById('mainContainer').clientHeight - margin.top - margin.bottom;
+
+        console.log(width, height)
+        document.getElementById('control').style.top = document.getElementById('mainContainer').clientHeight + 30 + 'px'
+        document.getElementById('control').style.left = document.body.clientWidth * 0.125 + 130 + 'px'
+        document.getElementById('control').style.display = 'block';
+        var xScale = d3.scaleBand()
+            .domain(data.map(function (d) { return d.date }))
+            .range([0, width])
+            .padding(0.1);
+
+        var yScale1 = d3.scaleLinear()
+            .domain([0, d3.max(data, function (d) { return d3.max([d.value1, d.value2]); })])
+            .range([height, 0]);
+
+
+        var xAxis = d3.axisBottom(xScale)
+            .tickFormat(function (d) { return d; });
+
+        var yAxis1 = d3.axisLeft(yScale1)
+            .ticks(20);
+
+        // var yAxis2 = d3.axisRight(yScale2)
+        //     .ticks(20);
+
+        var tooltip = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("background-color", "#d3d3d3")
+            .style("border-radius", "3px")
+            .style('opacity', 0)
+            .style("padding", "5px");
+
+        var svg = d3.select("body").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        // 添加 x 轴
+        svg.append("g")
+            .attr("class", "x-axis")
+            .attr("transform", "translate(0," + height + ")")
+            .call(xAxis) // 添加左侧 y 轴
+
+        // 添加左侧 y 轴
+        svg.append("g")
+            .attr("class", "y-axis1")
+            .call(yAxis1);
+
+        svg.append("text")
+            .attr("transform", "rotate(0)")
+            .attr("y", -3)
+            .attr("transform", "translate(0, -3)")
+            .style("text-anchor", "end")
+            .style("font-weight", "bold")
+            .style("font-size", "12px")
+            .text("Counts");
+
+        svg.append("text")
+            .attr("transform", "rotate(0)")
+            .attr("x", width / 2)
+            .attr("y", height + 33)
+            .attr("dy", "-7")
+            .style("text-anchor", "start")
+            .style("font-size", "12.5px")
+            .style("font-weight", "bold")
+            .text("Reporting Month");
+
+        // 添加折线图
+
+        var line = d3.line()
+            .curve(d3.curveMonotoneX)
+            .x(function (d) { return xScale(d.date); })
+            .y(function (d) { return yScale1(d.value2); });
+        svg.append("path")
+            .datum(data)
+            .attr("class", "line")
+            .attr("d", line);
+
+        svg.selectAll(".dot")
+            .data(data)
+            .enter().append("circle")
+            .attr("class", "dot")
+            .attr("cx", function (d) {
+                let valx = xScale(d.date)
+                let valy = yScale1(d.value2)
+                if (d.date === '01/22' ) {
+                    console.log(valx, valy);
+                    annotations.push({
+                        note: {
+                            label: "",
+                            title: 'Omicron variant outbreak',
+                            wrap: 150,
+                            align: "left"
+                        },
+                        connector: {
+                            end: "arrow"
+                        },
+                        x: valx,
+                        y: valy - 10,
+                        dy: -200,
+                        dx: 100
+                    })
+                }
+                if (d.date === '12/20'){
+                    annotations.push({
+                        note: {
+                            label: "",
+                            title: 'Outbreak from holiday gathering and First vaccine shipment arrives in California',
+                            wrap: 150,
+                            align: "left"
+                        },
+                        connector: {
+                            end: "arrow"
+                        },
+                        x: valx,
+                        y: valy - 10,
+                        dy: -200,
+                        dx: 100
+                    })
+                }
+                if (d.date === '06/20' ){
+                    annotations.push({
+                        note: {
+                            label: "",
+                            title: 'Business opening incubation period',
+                            wrap: 150,
+                            align: "left"
+                        },
+                        connector: {
+                            end: "arrow"
+                        },
+                        x: valx,
+                        y: valy - 10,
+                        dy: -200,
+                        dx: 100
+                    })
+                }
+                return valx;
+            })
+            .attr("cy", function (d) { return yScale1(d.value2); })
+            .attr("fill", '#e8b187')
+            .attr("r", 6)
+            .on("mouseover", function (d) {
+                var html = "<strong>Date: " + (d.date) + "</strong><br>"
+                    + "Positive_test: " + thousandFormat('' + d.value2);
+
+                tooltip.html(html)
+                    .style("left", (d3.event.pageX + 10) + "px")
+                    .style("top", (d3.event.pageY + 10) + "px")
+                    .style("opacity", 1);
+            })
+            .on("mouseout", function (d) {
+                tooltip.style("opacity", 0);
+            });
+
+        // 另一个线
+        var line1 = d3.line()
+            .curve(d3.curveMonotoneX)
+            .x(function (d) { return xScale(d.date); })
+            .y(function (d) { return yScale1(d.value1); });
+        svg.append("path")
+            .datum(data)
+            .attr("class", "line1")
+            .attr("d", line1);
+
+        svg.selectAll(".dot2")
+            .data(data)
+            .enter().append("circle")
+            .attr("class", "dot")
+            .attr("cx", function (d) { return xScale(d.date); })
+            .attr("cy", function (d) { return yScale1(d.value1); })
+            .attr("fill", '#6bd181')
+            .attr("r", 6)
+            .on("mouseover", function (d) {
+                var html = "<strong>Date: " + (d.date) + "</strong><br>"
+                    + "Total_tests: " + thousandFormat('' + d.value1);
+
+                tooltip.html(html)
+                    .style("left", (d3.event.pageX + 10) + "px")
+                    .style("top", (d3.event.pageY + 10) + "px")
+                    .style("opacity", 1);
+            })
+            .on("mouseout", function (d) {
+                tooltip.style("opacity", 0);
+            });
+
+        annotations.map(function (d) { d.color = "#E8336D"; return d })
+
+        const makeAnnotations = d3.annotation()
+            .type(d3.annotationLabel)
+            .annotations(annotations)
+
+        svg
+            .append("g")
+            .attr("class", "annotation-group")
+            .call(makeAnnotations)
+
+    }
+
+    function thousandFormat(num) {
+        const rgx = /(\d+)(\d{3})/;
+        while (rgx.test(num)) {
+            num = num.replace(rgx, '$1,$2');
+        }
+        return num;
+    }
+
+    function pre() {
+        // window.history.go(-1)
+        window.open('./page2.html', '_self')
+    }
+    function next() {
+        window.open('./page4.html', '_self')
+    }
+</script>
+
+</html>
