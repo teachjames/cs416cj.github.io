@@ -45,6 +45,18 @@
             margin: 0 auto;
         }
 
+        ul{
+            width: auto;
+            display: table;
+            margin: 0 auto;
+        }
+
+        #img{
+            background-image: url('./mapC.png');
+            background-repeat: no-repeat;
+            background-size: 100% 100%;
+            margin:  0 auto;
+        }
 
     </style>
 </head>
@@ -53,7 +65,7 @@
         <!-- <div class="btn" onclick="pre()">Previous</div> -->
         <div class="btn" onclick="next()">Next</div>
     </div>
-    <div class="container">
+    <div class="container" id="container">
         <h2 style="text-align: center;">California's COVID-19 Story: A Visual Guide Through Tests, Cases, and County Impacts</h2>
         <br />
         <p>
@@ -67,16 +79,23 @@
             <li>Are there specific periods where we see a significant rise in positive tests compared to total tests?</li>
         </ul>
 
-        <img src="./mapC.png" width="80%"/>
+        <!-- <img src="./mapC.png" width="80%"/> -->
     </div>
+    <div id="img"></div>
     
 </body>
 <script>
+    let width = 2048 , height = 1366;
+    let h = document.body.clientHeight - document.getElementById('container').clientHeight 
+    let w = width * (h / height)
+    console.log(w, h)
+    document.getElementById('img').style.width = w + 'px';
+    document.getElementById('img').style.height = h + 'px';
     // function pre(){
     //         window.history.go(-1)
     //     }
         function next(){
-            window.open('./page2.html','_self')
+            window.open('./index1.html','_self')
         }
 </script>
 </html>

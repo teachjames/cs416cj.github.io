@@ -3,65 +3,243 @@
 
 <head>
     <meta charset="utf-8">
-    <title>折图>
-        <style>
-            .axis line {
-                fill: none;
-                stroke:steelblue;
-                stroke-width: 2px;
-            }
+    <title>cases && cumulative_cases chart</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <style>
+        html,body,h1,h2,h3,h4,h5,h6,div,dl,dt,dd,ul,ol,li,p,blockquote,pre,hr,figure,table,caption,th,td,form,fieldset,legend,input,button,textarea,menu{margin:0;padding:0;}
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0 !important;
+            padding: 0;
+        }
+        svg{
+            position: absolute;
+            left: 0;
+            right: 0;
+            margin: auto;
+        }
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: #000;
+            shape-rendering: crispEdges;
+        }
 
-            .overlay {
-                fill: none;
-                pointer-events: all;
-            }
+        .bar {
+            fill: steelblue;
+        }
 
-            .focus circle {
-                fill: none;
-                stroke: steelblue;
-            }
+        .line {
+            fill: none;
+            stroke: skyblue;
+            stroke-width: 2px;
+        }
 
-            .focus text {
-                font-size: 12px;
-            }
+        .tooltip {
+            position: absolute;
+            text-align: left;
+            width: 200px;
+            height: 40px;
+            padding: 10px;
+            font: 12px sans-serif;
+            background: #fff;
+            border: 0px;
+            border-radius: 8px;
+            pointer-events: none;
+        }
 
-            .tooltip {
-                position: absolute;
-                background-color: #fff;
-                border: 1px solid #ccc;
-                padding: 10px;
-                opacity: 0;
-            }
-        </style>
-        <script src="https://js.org.js"></script>
+        .control {
+            font-size: 13px;
+            position: fixed;
+            z-index: 111;
+            display: none;
+        }
+
+        .btns {
+            position: absolute;
+            bottom: 40px;
+            left: 12.5%;
+            display: flex;
+            z-index: 1111;
+        }
+
+        .btns .btn {
+            width: 100px;
+            height: 30px;
+            line-height: 30px;
+            border-radius: 5px;
+            text-align: center;
+            color: #fff;
+            background-color: rgb(79, 118, 192);
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .btns .btn:hover {
+            color: #000;
+            box-shadow: 0 0 5px #bbb;
+        }
+        .container{
+            padding-top: 20px;
+            display: flex;
+            flex-direction: column;
+            width: 75%;
+            line-height: 28px;
+            display: flex;
+            margin: 0 auto;
+        }
+        ul{
+            width: auto;
+            display: table;
+            margin: 0 auto;
+        }
+       
+    </style>
 </head>
 
 <body>
-    <svg width="400"></svg>
-    <div class=""></div>
-    <script>
-        var data = [
-        { date: new Date(2020, 0, 1), value1: 100, value2: 50 },
-            { date: new Date(2020, 1, 1), value1: 200, value2: 100 },
-            { date: new Date(2020, 2, 1), value1: 300, value2: 150 },
-            { date: new Date(2020, 3,), value1: 400, value2: 200 },
-            { date: new Date(2020, 4, 1), value1: 500, value2: 250 },
-            { date: new Date(2020, 5, 1), value1: 600, value2: 300 },
-            { date: new Date(2020, 6, 1), value1: 700, value2: 350 },
-            { date: new Date(2020, 7, 1), value1: 800, value2: 400 },
-            { date: new Date(2020, 8, 1), value1: 900, value2: 450 },
-            { date: new Date(2020, 9, 1), value1: 1000, value2: 500 },
-            { date: new Date(2020, 10, 1), value1: 1100, value2: 550 },
-            { date: new Date(2020, 11, 1), value1: 1200, value2: 600 }
-    ];
+   
+    <div class="control" id="control">
+        <div style="color:steelblue; width: 300px; display: flex;justify-content: flex-start;"><span style="width: 100px;display: inline-block;">Column Chart </span> <label>– Monthly Cases</label></div>
+        <div style="color: skyblue; width: 300px; display: flex;justify-content: flex-start;"><span style="width: 100px;display: inline-block;">Trend Line </span><label>– Cumulative Cases</label></div>
+        <br>
+        <div>
+            <label>Selected Area</label>
+            <select id="area" onchange="selectArea()"></select>
+        </div>
+    </div>
+    <div class="container" id="mainContainer">
+        <h2 style="text-align: center;">Monthly and Cumulative COVID-19 Case Trends in California</h2>
+        <br />
+        <ul>
+            <li>Our combined visualization captures the journey of COVID-19 in California, with the column chart
+                reflecting monthly case fluctuations and the trend line charting the cumulative case count.</li>
+            <li>A notable surge in cases between November 2020 and January 2021 reflects the virus's spread during
+                holiday gatherings, a time when vaccines were not yet available.</li>
+            <li>From December 2021 to January 2022, we see another significant spike in cases, this time due to the
+                Omicron variant and the decreased effectiveness of early vaccines.</li>
+            <li>January 2022 stands out as the month with the highest number of cases, a clear testament to the
+                challenges brought on by the Omicron variant.</li>
+            <li>From November 2022, the trend line starts to flatten, indicating a slowdown in case accumulation and
+                marking a turning point in California's COVID-19 journey.</li>
+        </ul>
+    </div>
+    <div id="svgContainer"> </div>
+     <div class="btns">
+        <div class="btn" onclick="pre()">Previous</div>
+        <div class="btn" onclick="next()">Next</div>
+    </div>
+</body>
 
-        var margin = { top: 20, right: 20, bottom: 30, left },
-            width = 600 - - margin.right,
-            height = 400 - margin.top - margin.bottom;
+<script>
+    let promise1 = d3.csv('./cases.csv')
+    // let promise2 = d3.csv('./cumulative_cases.csv')
+    let promise2 = d3.csv('./data.csv')
 
-        var xScale = d3.scaleLinear()
-            .domain([1, 12])
-            .range([0, width]);
+    let data = [];
+    let options = `<option value="total">All Areas</option>`;
+    let cases = [];
+    let cum_cases = [];
+
+    var monthOfYear = [];
+    for (let year = 2020; year <= 2023; year++) {
+        for (let month = 1; month <= 12; month++) {
+            if (year == 2020 && month < 2) {
+                continue;
+            }
+            if (year == 2023 && month > 7) {
+                continue;
+            }
+            let str = (month < 10 ? '0' + month : month) + '/' + year;
+
+            monthOfYear.push(str);
+        }
+    }
+
+    function selectArea() {
+        let str = document.getElementById('area').value
+        if (str === 'total') {
+            initAll()
+        } else {
+            data = []
+            monthOfYear.forEach(month => {
+                let case1 = cases.find(cs => cs.date === month);
+                if (!case1) {
+                    debugger;
+                }
+                let monthArr = month.split('/');
+                let cum_case = cum_cases.filter(cs => cs.date === Number(monthArr[0]) + '/1/' + Number(monthArr[1]) && cs.area === str);
+
+                let sum = cum_case.reduce(function (prev, cur, index, arr) {
+                    return prev + Number(cur.cumulative_cases);
+                }, 0)
+                console.log(cum_case, sum)
+                data.push({ date: month.replace('/20', '/'), value1: Number(case1[str]), value2: sum })
+            })
+            console.log(data)
+
+            rendererChart()
+        }
+    }
+
+    console.log(monthOfYear);
+
+    initAll()
+
+    function initAll() {
+        Promise.all([promise1, promise2]).then(result => {
+            data = []
+            cases = result[0]
+            cum_cases = result[1]
+            monthOfYear.forEach(month => {
+                let case1 = cases.find(cs => cs.date === month);
+                let monthArr = month.split('/');
+                let cum_case = cum_cases.filter(cs => cs.date === Number(monthArr[0]) + '/1/' + Number(monthArr[1]));
+
+                let sum = cum_case.reduce(function (prev, cur, index, arr) {
+                    return prev + Number(cur.cumulative_cases);
+                }, 0)
+                // console.log(sum)
+                data.push({ date: month.replace('/20', '/'), value1: Number(case1.total), value2: sum })
+            })
+            let mm = cases[0]
+            Object.keys(mm).forEach(ky => {
+                if (ky === 'date' || ky === 'total') {
+                } else {
+                    options += `<option value="${ky}">${ky}</option>`
+                }
+            })
+            console.log(cases)
+            document.getElementById('area').innerHTML = options
+            rendererChart()
+        })
+    }
+
+    function rendererChart() {
+        d3.select('svg').remove()
+
+        var margin = { top: 30, right: 100, bottom: 150, left: 110 },
+            width = document.body.clientWidth *0.75 - margin.left - margin.right,
+            height = document.body.clientHeight - document.getElementById('mainContainer').clientHeight - margin.top - margin.bottom;
+
+        console.log(width, height)
+        document.getElementById('control').style.top = document.getElementById('mainContainer').clientHeight + 30 + 'px' 
+        document.getElementById('control').style.left = document.body.clientWidth * 0.125 + 130 + 'px' 
+        document.getElementById('control').style.display = 'block'; 
+        var xScale = d3.scaleBand()
+            // .domain(data.map(function (d) { return d.date.getMonth() + 1; }))
+            .domain(data.map(function (d) {
+                // let arr = d.date.split('/')
+                // if (arr[0] !== '01'){
+                //     return arr[0] +'/' + arr[1].slice(2,4)
+                // } else {
+                //     return d.date
+                // }
+                return d.date
+            }))
+            .range([0, width])
+            .padding(0.1);
 
         var yScale1 = d3.scaleLinear()
             .domain([0, d3.max(data, function (d) { return d.value1; })])
@@ -72,80 +250,143 @@
             .range([height, 0]);
 
         var xAxis = d3.axisBottom(xScale)
-            .tickFormat(function (d) { return "Month " + d; });
+            .tickFormat(function (d) { return d; });
 
-        var yAxis1 = d3.axisLeft(yScale1);
+        var yAxis1 = d3.axisLeft(yScale1)
+            .ticks(20);
 
-        var yAxis2 = d3.axisRight(yScale2);
+        var yAxis2 = d3.axisRight(yScale2)
+            .ticks(20);
 
-        var svg = d3.select("svg")
+        var tooltip = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("background-color", "#d3d3d3")
+            .style("border-radius", "3px")
+            .style('opacity', 0)
+            .style("padding", "5px");
+
+        var svg = d3.select("#svgContainer").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
             .append("g")
             .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+        // 添加 x 轴
         svg.append("g")
-            .attr("class", "x axis")
+            .attr("class", "x-axis")
             .attr("transform", "translate(0," + height + ")")
-            .call(xAxis);
+            .call(xAxis)
 
+        // 添加左侧 y 轴
         svg.append("g")
-            .attr("class", "y axis axis1")
+            .attr("class", "y-axis1")
             .call(yAxis1);
 
+        // 添加右侧 y 轴
         svg.append("g")
-            .attr("class", "y axis axis2")
-            .attr("transform", "(" + width + ", 0)")
-                .call(yAxis2);
+            .attr("class", "y-axis2")
+            .attr("transform", "translate(" + width + ",0)")
+            .call(yAxis2);
 
+        svg.append("text")
+            .attr("transform", "rotate(0)")
+            .attr("y", -1)
+            // .attr("dy", ".1em")
+            .style("text-anchor", "end")
+            .style("font-weight", "bold")
+            .style("font-size", "12px")
+            .text("Case by Month");
 
-        var tooltip = d3.select(".tooltip");
+        svg.append("text")
+            .attr("transform", "rotate(0)")
+            .attr("x", width + 10)
+            .attr("y", -1)
+            // .attr("dy", ".71em")
+            .style("text-anchor", "start")
+            .style("font-weight", "bold")
+            .style("font-size", "12px")
+            .text("Total Cases");
 
+        svg.append("text")
+            .attr("transform", "rotate(0)")
+            .attr("x", width / 2)
+            .attr("y", height + 33)
+            .attr("dy", "-7")
+            .style("text-anchor", "start")
+            .style("font-weight", "bold")
+            .style("font-size", "12.5px")
+            // .style("letter-spacing", "1px")
+            .text("Reporting Month");
+
+        // 添加柱状图
         svg.selectAll(".bar")
             .data(data)
             .enter().append("rect")
             .attr("class", "bar")
-            .attr("x", function (d) { return xScale(d.date.getMonth() + 1); })
+            // .attr("x", function (d) { return xScale(d.date.getMonth() + 1); })
+            .attr("x", function (d) { return xScale(d.date); })
             .attr("y", function (d) { return yScale1(d.value1); })
             .attr("width", 10)
             .attr("height", function (d) { return height - yScale1(d.value1); })
-            .on("mouseover", function (d ){
-                var html = "<strong>Month " + (d.date.getMonth() + 1) + "</strong><br>"
-                + "Value 1: " + d.value1;
-
-        tooltip.html(html)
-            .style("left", (d3.event.pageX + 10) + "px")
-            .style("top", (d3.event.pageY + 10) + "px")
-            .on("mouseout", function (d) {
-                // tooltip.style("opacity", 0);
-                var line = d3.line()
-                    .x(function (d) { return xScale(d.datee.getMonth() + 1); })
-                    .y(function (d) { return yScale2(d.value2); });
-
-                svg.append("path")
-                    .datum(data)
-                    .attr("class", "line")
-                    .attr("d", line);
-
-                svg.selectAll(".dot")
-                    .data(data)
-                    .enter().append("circle")
-                    .attr("class", "dot")
-                    .attr("cx", function (d) { return xScale(d.date.getMonth() + 1); })
-                    .attr("cy", function (d) { return yScale2(d.value2); })
-                    .attr("r", 5)
-                    .on("mouseover", function (d) {
-                        var html = "<strong>Month " + (d.date.getMonth() + 1) + "</strong><br>"
-                            + "Value 2: " + d.value2;
-                        tooltip.html(html)
-                            .style("left", (d3.event.pageX + 10) + "px")
-                            .style("top", (d3.event.pageY + 10) + "px")
-                            .style("opacity", 1);
-                    })
-                    .on("mouseout", function (d) {
-                        tooltip.style("opacity", 0);
-                    });
-                })
+            .on("mouseover", function (d) {
+                var html = "<strong>Date: " + (d.date) + "</strong><br>"
+                    + "Cases: " + thousandFormat('' + d.value1);
+                tooltip.html(html)
+                    .style("left", (d3.event.pageX + 10) + "px")
+                    .style("top", (d3.event.pageY + 10) + "px")
+                    .style("opacity", 1);
             })
-    </script>
-</body>
+            .on("mouseout", function (d) {
+                tooltip.style("opacity", 0);
+            });
 
+        // 添加折线图
+        var line = d3.line()
+            .curve(d3.curveMonotoneX) // 平滑曲线
+            .x(function (d) { return xScale(d.date); })
+            .y(function (d) { return yScale2(d.value2); });
+        svg.append("path")
+            .datum(data)
+            .attr("class", "line")
+            .attr("d", line);
+
+        svg.selectAll(".dot")
+            .data(data)
+            .enter().append("circle")
+            .attr("class", "dot")
+            .attr("cx", function (d) { return xScale(d.date); })
+            .attr("cy", function (d) { return yScale2(d.value2); })
+            .attr("fill", 'skyblue')
+            .attr("r", 6)
+            .on("mouseover", function (d) {
+                var html = "<strong>Date: " + (d.date) + "</strong><br>"
+                    + "Cumulative_cases: " + thousandFormat(d.value2 + '');
+
+                tooltip.html(html)
+                    .style("left", (d3.event.pageX + 10) + "px")
+                    .style("top", (d3.event.pageY + 10) + "px")
+                    .style("opacity", 1);
+            })
+            .on("mouseout", function (d) {
+                tooltip.style("opacity", 0);
+            });
+    }
+
+    function thousandFormat(num) {
+        const rgx = /(\d+)(\d{3})/;
+        while (rgx.test(num)) {
+            num = num.replace(rgx, '$1,$2');
+        }
+        return num;
+    }
+
+    function pre() {
+        // window.history.go(-1)
+        window.open('./index.html', '_self')
+    }
+    function next() {
+        window.open('./index2.html', '_self')
+    }
+</script>
 </html>
